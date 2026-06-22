@@ -46,7 +46,11 @@
   }
   @keyframes xp-fill {
     from { width:0%; }
-    to   { width:62%; }
+    to   { width:var(--xp-w,62%); }
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
   }
 
   .pulse-ring  { animation: pulse-ring 2s ease-in-out infinite; }
@@ -549,10 +553,18 @@ function iconForWaste(name) {
   return 'bottle';
 }
 
-function getTotalPts() { return parseInt(localStorage.getItem('sortify_total_pts') || '0'); }
-function addTotalPts(n) {
+function getTotalPts() {
+  if (!localStorage.getItem('sortify_total_pts')) localStorage.setItem('sortify_total_pts', '800');
+  return parseInt(localStorage.getItem('sortify_total_pts'));
+}
+function addTotalPts(n, co2kg) {
   const next = getTotalPts() + (parseInt(n) || 0);
   localStorage.setItem('sortify_total_pts', String(next));
+  const scans = parseInt(localStorage.getItem('sortify_scan_count') || '0') + 1;
+  localStorage.setItem('sortify_scan_count', String(scans));
+  const co2 = parseFloat(co2kg) || 0;
+  const co2Total = parseFloat(localStorage.getItem('sortify_co2_total') || '0') + co2;
+  localStorage.setItem('sortify_co2_total', co2Total.toFixed(2));
   return next;
 }
 
@@ -601,6 +613,7 @@ function ScreenScan({ onNav, tweaks }) {
   const [keyInput, setKeyInput] = React.useState('');
   const [proxyInput, setProxyInput] = React.useState('');
   const [totalPts, setTotalPts] = React.useState(getTotalPts);
+  const [previewUrl, setPreviewUrl] = React.useState(null);
   const fileRef = React.useRef(null);
 
   const getKey = () => localStorage.getItem('sortify_api_key') || '';
@@ -620,6 +633,9 @@ function ScreenScan({ onNav, tweaks }) {
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    const pv = URL.createObjectURL(file);
+    setPreviewUrl(pv);
     setScanning(true);
     setError(null);
     setResult(null);
@@ -671,7 +687,7 @@ Exemples de mauvais "why" (à éviter) : "Ce déchet contient 47% de fibres orga
       const parsed = JSON.parse(raw);
       window._lastScanResult = parsed;
       setResult(parsed);
-      setTotalPts(addTotalPts(parsed.pts));
+      setTotalPts(addTotalPts(parsed.pts, parseFloat(parsed.co2)));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -710,6 +726,34 @@ Exemples de mauvais "why" (à éviter) : "Ce déchet contient 47% de fibres orga
         <div style={{ position:'absolute', inset:0,
           background:'radial-gradient(ellipse at 50% 45%, transparent 25%, rgba(0,8,2,0.8) 100%)' }} />
       </div>
+
+      {/* photo result background (non-blurred) */}
+      {result && previewUrl && (
+        <div style={{ position:'absolute', inset:0, zIndex:1 }}>
+          <img src={previewUrl} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+          <div style={{ position:'absolute', inset:0,
+            background:'linear-gradient(to bottom, rgba(0,20,5,0.2) 0%, rgba(10,24,12,0.7) 55%, #0F1F10 78%)' }} />
+        </div>
+      )}
+
+      {/* scanning overlay: blurred photo + spinner */}
+      {scanning && previewUrl && (
+        <div style={{ position:'absolute', inset:0, zIndex:15 }}>
+          <img src={previewUrl} style={{ width:'100%', height:'100%', objectFit:'cover', filter:'blur(18px)', transform:'scale(1.12)' }} />
+          <div style={{ position:'absolute', inset:0, background:'rgba(0,18,4,0.65)' }} />
+          <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-60%)',
+            display:'flex', flexDirection:'column', alignItems:'center', gap:22 }}>
+            <div style={{ width:72, height:72, borderRadius:'50%',
+              background:`linear-gradient(135deg, ${DS.accent}, ${DS.primary})`,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              boxShadow:`0 0 36px ${DS.accent}77`,
+              animation:'spin 1.1s linear infinite' }}>
+              <Icon name="scan" size={34} color="#fff" />
+            </div>
+            <p style={{ color:'#fff', fontWeight:700, fontSize:16, letterSpacing:.3 }}>Analyse du déchet…</p>
+          </div>
+        </div>
+      )}
 
       {/* top bar */}
       <div style={{ position:'absolute', top:56, left:0, right:0, zIndex:10,
@@ -760,7 +804,7 @@ Exemples de mauvais "why" (à éviter) : "Ce déchet contient 47% de fibres orga
       <div style={{ position:'absolute', top:'68%', left:0, right:0,
         display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
         <p style={{ color:'rgba(255,255,255,0.75)', fontSize:15, fontWeight:600 }}>
-          {scanning ? 'Analyse Claude Vision…' : result ? 'Déchet identifié !' : 'Pointez votre déchet'}
+          {result ? 'Déchet identifié !' : 'Pointez votre déchet'}
         </p>
         {!scanning && !result && !error && (
           <button onClick={launchScan} style={{ background:`linear-gradient(135deg, ${DS.accent}, ${DS.primary})`,
@@ -830,7 +874,7 @@ Exemples de mauvais "why" (à éviter) : "Ce déchet contient 47% de fibres orga
             </div>
           )}
           <div style={{ display:'flex', gap:10 }}>
-            <button onClick={() => { setResult(null); setError(null); }} style={{ flex:1, background:DS.green100,
+            <button onClick={() => { setResult(null); setError(null); setPreviewUrl(null); }} style={{ flex:1, background:DS.green100,
               border:'none', borderRadius:12, padding:'11px', color:DS.accent,
               fontFamily:'Manrope', fontWeight:700, fontSize:13, cursor:'pointer' }}>Nouveau</button>
             <button onClick={() => onNav('details')} style={{ flex:2,
@@ -859,7 +903,7 @@ Exemples de mauvais "why" (à éviter) : "Ce déchet contient 47% de fibres orga
               </div>
             </div>
             <p style={{ color:DS.textSecondary, fontSize:13, marginBottom:18, lineHeight:1.6 }}>
-              Entrez votre clé API Anthropic pour activer l'analyse IA des déchets par Claude Vision.
+              Entrez votre clé API Anthropic pour activer l'analyse IA des déchets.
             </p>
             <input
               type="password"
@@ -1481,7 +1525,25 @@ function ScreenCommunity() {
 }
 
 // ─── SCREEN: PROFIL ──────────────────────────────────────────
+const LEVELS = [
+  {min:0,    max:200,  num:1, label:'Éco Débutant'},
+  {min:200,  max:500,  num:2, label:'Éco Conscient'},
+  {min:500,  max:1000, num:3, label:'Éco Actif'},
+  {min:1000, max:2000, num:4, label:'Éco Engagé'},
+  {min:2000, max:3500, num:5, label:'Éco Champion'},
+  {min:3500, max:5000, num:6, label:'Éco Expert'},
+  {min:5000, max:7000, num:7, label:'Éco Leader'},
+  {min:7000, max:Infinity, num:8, label:'Éco Légende'},
+];
+
 function ScreenProfil() {
+  const pts = getTotalPts();
+  const scanCount = parseInt(localStorage.getItem('sortify_scan_count') || '0');
+  const co2Total = parseFloat(localStorage.getItem('sortify_co2_total') || '0');
+  const lvl = LEVELS.find(l => pts < l.max) || LEVELS[LEVELS.length - 1];
+  const lvlProgress = lvl.max === Infinity ? 100
+    : Math.min(100, Math.round((pts - lvl.min) / (lvl.max - lvl.min) * 100));
+
   const badges = [
     {icon:'trophy',color:'#F59E0B',label:'Premier scan'},{icon:'fire',color:'#EF4444',label:'Streak 7j'},
     {icon:'recycle',color:DS.accent,label:'10kg'},{icon:'handshake',color:'#7C3AED',label:'Communauté'},
@@ -1514,21 +1576,24 @@ function ScreenProfil() {
           boxShadow:DS.shadowSm }}>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <Icon name="trophy" size={20} color="#F59E0B" />
-            <span style={{ color:DS.textPrimary, fontWeight:800, fontSize:14 }}>Niveau 7 — Eco Expert</span>
+            <span style={{ color:DS.textPrimary, fontWeight:800, fontSize:14 }}>Niveau {lvl.num} — {lvl.label}</span>
           </div>
           <div style={{ width:200, background:DS.bgAlt, borderRadius:99, height:7, overflow:'hidden' }}>
-            <div className="xp-fill" style={{ height:'100%', width:0, borderRadius:99,
+            <div style={{ height:'100%', borderRadius:99, transition:'width 1s ease',
+              width:`${lvlProgress}%`,
               background:`linear-gradient(90deg, ${DS.accent}, #66BB6A)` }} />
           </div>
-          <p style={{ color:DS.textMuted, fontSize:11 }}>3 240 / 5 000 XP</p>
+          <p style={{ color:DS.textMuted, fontSize:11 }}>{pts.toLocaleString('fr-FR')} / {lvl.max === Infinity ? '∞' : lvl.max.toLocaleString('fr-FR')} pts</p>
         </div>
       </div>
 
       {/* stats */}
       <SectionHeader title="Mes statistiques" />
       <div style={{ padding:'0 16px 20px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-        {[{icon:'recycle',val:'47.3 kg',label:'Total recyclé',color:DS.accent},{icon:'leaf',val:'31.2 kg',label:'CO₂ évité',color:DS.accent},
-          {icon:'fire',val:'12 jours',label:'Streak record',color:'#EF4444'},{icon:'coin',val:getTotalPts().toLocaleString('fr-FR'),label:'Points totaux',gold:true,color:'#F59E0B'}]
+        {[{icon:'recycle',val:`${scanCount} scan${scanCount !== 1 ? 's' : ''}`,label:'Scans réalisés',color:DS.accent},
+          {icon:'leaf',val:`${co2Total.toFixed(2)} kg`,label:'CO₂ évité',color:DS.accent},
+          {icon:'fire',val:'12 jours',label:'Streak record',color:'#EF4444'},
+          {icon:'coin',val:pts.toLocaleString('fr-FR'),label:'Points totaux',gold:true,color:'#F59E0B'}]
           .map((s,i) => (
           <Card key={i}>
             <Icon name={s.icon} size={26} color={s.color} />
