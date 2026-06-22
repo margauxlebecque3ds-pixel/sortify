@@ -553,20 +553,16 @@ function iconForWaste(name) {
   return 'bottle';
 }
 
-function getTotalPts() {
-  if (!localStorage.getItem('sortify_total_pts')) localStorage.setItem('sortify_total_pts', '800');
-  return parseInt(localStorage.getItem('sortify_total_pts'));
-}
+let _pts = 800, _scans = 0, _co2 = 0;
+function getTotalPts() { return _pts; }
 function addTotalPts(n, co2kg) {
-  const next = getTotalPts() + (parseInt(n) || 0);
-  localStorage.setItem('sortify_total_pts', String(next));
-  const scans = parseInt(localStorage.getItem('sortify_scan_count') || '0') + 1;
-  localStorage.setItem('sortify_scan_count', String(scans));
-  const co2 = parseFloat(co2kg) || 0;
-  const co2Total = parseFloat(localStorage.getItem('sortify_co2_total') || '0') + co2;
-  localStorage.setItem('sortify_co2_total', co2Total.toFixed(2));
-  return next;
+  _pts += (parseInt(n) || 0);
+  _scans += 1;
+  _co2 = parseFloat((_co2 + (parseFloat(co2kg) || 0)).toFixed(2));
+  return _pts;
 }
+function getScanCount() { return _scans; }
+function getCo2Total() { return _co2; }
 
 function binColor(bin) {
   if (!bin) return '#F59E0B';
@@ -1538,8 +1534,8 @@ const LEVELS = [
 
 function ScreenProfil() {
   const pts = getTotalPts();
-  const scanCount = parseInt(localStorage.getItem('sortify_scan_count') || '0');
-  const co2Total = parseFloat(localStorage.getItem('sortify_co2_total') || '0');
+  const scanCount = getScanCount();
+  const co2Total = getCo2Total();
   const lvl = LEVELS.find(l => pts < l.max) || LEVELS[LEVELS.length - 1];
   const lvlProgress = lvl.max === Infinity ? 100
     : Math.min(100, Math.round((pts - lvl.min) / (lvl.max - lvl.min) * 100));
