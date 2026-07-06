@@ -612,12 +612,8 @@ function ScreenScan({ onNav, tweaks }) {
   const [previewUrl, setPreviewUrl] = React.useState(null);
   const fileRef = React.useRef(null);
 
-  const getKey = () => localStorage.getItem('sortify_api_key') || '';
-  // Use /proxy when served via HTTP; otherwise require explicit proxy URL
-  const getProxyUrl = () =>
-    window.location.protocol !== 'file:'
-      ? (localStorage.getItem('sortify_proxy_url') || '/proxy')
-      : (localStorage.getItem('sortify_proxy_url') || '');
+  const getKey = () => localStorage.getItem('sortify_api_key') || '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';
+  const getProxyUrl = () => localStorage.getItem('sortify_proxy_url') || 'https://restless-pond-1800.margauxlebecque3ds.workers.dev/';
 
   const launchScan = () => {
     if (!getKey()) { setKeyInput(''); setShowKeyModal(true); return; }
