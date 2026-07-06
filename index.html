@@ -671,7 +671,7 @@ Exemples de mauvais "why" (à éviter) : "Ce déchet contient 47% de fibres orga
       }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || 'Erreur proxy ' + res.status);
+        throw new Error(err.error?.message || err.error || 'Erreur proxy ' + res.status);
       }
       const data = await res.json();
       const raw = data.content[0].text.trim().replace(/^```json?\s*/,'').replace(/\s*```$/,'');
