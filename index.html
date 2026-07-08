@@ -151,8 +151,13 @@ function Card({ children, style={}, pad=18 }) {
   );
 }
 
-function SectionHeader({ title, action }) {
-  return (
+// Rend les modals dans <body> pour passer au-dessus de la BottomNav
+// (l'animation slide-up des écrans crée un stacking context qui piège le z-index)
+function ModalPortal({ children }) {
+  return ReactDOM.createPortal(children, document.body);
+}
+
+function SectionHeader({ title, action }) {  return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
       padding:'4px 16px 10px' }}>
       <h2 style={{ color:DS.textPrimary, fontWeight:800, fontSize:16 }}>{title}</h2>
@@ -987,11 +992,13 @@ Exemples de mauvais "why" (à éviter) : "Ce déchet contient 47% de fibres orga
 
       {/* Recherche manuelle modal */}
       {showSearchModal && (
-        <div className="fade-in" style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.75)',
-          display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:200 }}
+        <ModalPortal>
+        <div className="fade-in" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)',
+          display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:300 }}
           onClick={() => setShowSearchModal(false)}>
           <div className="sheet-up" onClick={e => e.stopPropagation()}
-            style={{ background:'#fff', borderRadius:'24px 24px 0 0', padding:'28px 24px 36px',
+            style={{ background:'#fff', borderRadius:'24px 24px 0 0',
+            padding:'28px 24px calc(36px + env(safe-area-inset-bottom, 0px))',
             width:'100%', boxShadow:'0 -8px 48px rgba(0,0,0,0.35)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
               <div style={{ width:42, height:42, borderRadius:12, background:DS.green100,
@@ -1031,13 +1038,15 @@ Exemples de mauvais "why" (à éviter) : "Ce déchet contient 47% de fibres orga
             </button>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* API key modal */}
       {showKeyModal && (
         <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.75)',
           display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:200 }}>
-          <div style={{ background:'#fff', borderRadius:'24px 24px 0 0', padding:'28px 24px 36px',
+          <div style={{ background:'#fff', borderRadius:'24px 24px 0 0',
+            padding:'28px 24px calc(36px + env(safe-area-inset-bottom, 0px))',
             width:'100%', boxShadow:'0 -8px 48px rgba(0,0,0,0.35)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
               <div style={{ width:42, height:42, borderRadius:12, background:DS.green100,
@@ -1084,7 +1093,8 @@ Exemples de mauvais "why" (à éviter) : "Ce déchet contient 47% de fibres orga
       {showProxyModal && (
         <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.75)',
           display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:200 }}>
-          <div style={{ background:'#fff', borderRadius:'24px 24px 0 0', padding:'28px 24px 36px',
+          <div style={{ background:'#fff', borderRadius:'24px 24px 0 0',
+            padding:'28px 24px calc(36px + env(safe-area-inset-bottom, 0px))',
             width:'100%', boxShadow:'0 -8px 48px rgba(0,0,0,0.35)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
               <div style={{ width:42, height:42, borderRadius:12,
@@ -1544,11 +1554,13 @@ function ScreenBoutique() {
 
       {/* Échange modal */}
       {redeem && (
+        <ModalPortal>
         <div className="fade-in" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)',
-          display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:200 }}
+          display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:300 }}
           onClick={() => !redeemDone && setRedeem(null)}>
           <div className="sheet-up" onClick={e => e.stopPropagation()}
-            style={{ background:'#fff', borderRadius:'24px 24px 0 0', padding:'28px 24px 36px',
+            style={{ background:'#fff', borderRadius:'24px 24px 0 0',
+            padding:'28px 24px calc(36px + env(safe-area-inset-bottom, 0px))',
             width:'100%', boxShadow:'0 -8px 48px rgba(0,0,0,0.35)' }}>
             {!redeemDone ? (
               <React.Fragment>
@@ -1603,6 +1615,7 @@ function ScreenBoutique() {
             )}
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );
@@ -1754,11 +1767,13 @@ function ScreenCommunity() {
 
       {/* Défier modal */}
       {challenge && (
+        <ModalPortal>
         <div className="fade-in" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)',
-          display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:200 }}
+          display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:300 }}
           onClick={() => !challengeSent && setChallenge(null)}>
           <div className="sheet-up" onClick={e => e.stopPropagation()}
-            style={{ background:'#fff', borderRadius:'24px 24px 0 0', padding:'28px 24px 36px',
+            style={{ background:'#fff', borderRadius:'24px 24px 0 0',
+            padding:'28px 24px calc(36px + env(safe-area-inset-bottom, 0px))',
             width:'100%', boxShadow:'0 -8px 48px rgba(0,0,0,0.35)' }}>
             {!challengeSent ? (
               <React.Fragment>
@@ -1808,6 +1823,7 @@ function ScreenCommunity() {
             )}
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );
